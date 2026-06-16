@@ -10,11 +10,29 @@ def render():
     sessions = runner.get("sessions", [])
 
     if not sessions:
-        st.info("No training sessions found.")
+        st.info("No training sessions logged yet.")
         return
 
     df = pd.DataFrame(sessions)
-    df.columns = ["Date", "Distance (km)", "Pace (/km)", "Type"]
-    df["Type"] = df["Type"].str.capitalize()
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("date").reset_index(drop=True)
 
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    total_km = df["km"].sum()
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total sessions", len(df))
+    col2.metric("Total distance", f"{total_km:.1f} km")
+    col3.metric("Avg per session", f"{total_km / len(df):.1f} km")
+
+    st.subheader("Weekly distance (km)")
+    weekly = df.set_index("date")["km"].resample("W").sum()
+    st.bar_chart(weekly)
+
+    st.subheader("All sessions")
+    display = df.rename(columns={
+        "date": "Date",
+        "km": "Distance (km)",
+        "pace": "Pace (/km)",
+        "type": "Type"
+    })
+    display["Type"] = display["Type"].str.capitalize()
+    st.dataframe(display, use_container_width=True, hide_index=True)
