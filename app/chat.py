@@ -3,6 +3,12 @@ import streamlit as st
 
 def render():
     st.title("Chat with your Coach")
+    
+    if not st.session_state.messages:
+        st.session_state.messages.append({
+            "role": "assistant", 
+            "content": "Hi! Tell me your goal and I'll build a plan."
+        })
 
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
