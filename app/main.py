@@ -31,3 +31,4 @@ elif st.session_state.page == "User Profile":
 elif st.session_state.page == "Training History":
     from app.history import render
     render()
+
