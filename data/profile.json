@@ -1,0 +1,31 @@
+{
+  "identity": {
+    "first_name": "Marie",
+    "city": "Lyon",
+    "gender": "female"
+  },
+  "goal": {
+    "race_type": "10k",
+    "target_time": "00:50:00",
+    "race_date": null,
+    "horizon_weeks": 10
+  },
+  "availability": {
+    "sessions_per_week": 3,
+    "preferred_days": [
+      "Tue",
+      "Thu",
+      "Sat"
+    ],
+    "max_session_min": null
+  },
+  "constraints": [
+    {
+      "kind": "injury",
+      "area": "right knee",
+      "note": "niggle",
+      "active": true
+    }
+  ],
+  "notes": ""
+}
