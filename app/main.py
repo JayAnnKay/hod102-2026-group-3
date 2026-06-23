@@ -1,6 +1,28 @@
 import streamlit as st
+import hmac
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 st.set_page_config(page_title="Running Coach", layout="centered")
+
+# ── PASSWORD GATE ──────────────────────────────────────────
+def check_password():
+    st.title("🔒 Running Coach | Login")
+    pw = st.text_input("Enter password", type="password")
+    if st.button("Login"):
+        secret = os.environ.get("APP_PASSWORD", "")
+        if hmac.compare_digest(pw.strip(), secret):
+            st.session_state.authed = True
+            st.rerun()
+        else:
+            st.error("Incorrect password.")
+
+if not st.session_state.get("authed", False):
+    check_password()
+    st.stop()
+# ──────────────────────────────────────────────────────────
 
 if "page" not in st.session_state:
     st.session_state.page = "Chat"
@@ -32,3 +54,4 @@ elif st.session_state.page == "Training History":
     from app.history import render
     render()
 
+    render()
