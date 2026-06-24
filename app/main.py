@@ -387,3 +387,5 @@ elif st.session_state.page == "Profile":
 elif st.session_state.page == "History":
     from app.history import render
     render()
+
+    render()

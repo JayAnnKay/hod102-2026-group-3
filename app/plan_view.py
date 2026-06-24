@@ -28,6 +28,7 @@ def render():
     )
 
     plan = st.session_state.get("plan", "")
+    st.write(plan)
 
     if not plan:
         st.markdown(

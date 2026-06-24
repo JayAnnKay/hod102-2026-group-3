@@ -25,6 +25,7 @@ from core.profile_model import (
     CONSTRAINT_KINDS,
     DAYS,
     GENDERS,
+    SEVERITIES,
     RunnerProfile,
     default_profile,
     to_display_rows,
@@ -33,11 +34,12 @@ from core.profile_model import (
 
 def _constraints_to_df(profile: RunnerProfile) -> pd.DataFrame:
     rows = [
-        {"kind": c.kind, "area": c.area or "", "note": c.note, "active": c.active}
+        {"kind": c.kind, "area": c.area or "", "note": c.note,
+         "severity": c.severity or "", "active": c.active}
         for c in profile.constraints
     ]
     if not rows:
-        rows = [{"kind": "other", "area": "", "note": "", "active": True}]
+        rows = [{"kind": "other", "area": "", "note": "", "severity": "", "active": True}]
     return pd.DataFrame(rows)
 
 
@@ -48,11 +50,13 @@ def _df_to_constraints(df: pd.DataFrame) -> list[dict]:
         area = str(r.get("area", "")).strip()
         if not note and not area:
             continue  # drop empty rows
+        sev = str(r.get("severity", "")).strip()
         out.append(
             {
                 "kind": r.get("kind", "other"),
                 "area": area or None,
                 "note": note,
+                "severity": sev or None,
                 "active": bool(r.get("active", True)),
             }
         )
@@ -108,6 +112,10 @@ def render() -> None:
 
         st.subheader("Goal")
         race_type = st.text_input("Race / goal type", profile.goal.race_type)
+        target_distance = st.number_input(
+            "Target distance (km, 0 = unset)", min_value=0.0, max_value=500.0,
+            value=float(profile.goal.target_distance_km or 0), step=0.5,
+        )
         target_time = st.text_input(
             "Target time (MM:SS or HH:MM:SS)", profile.goal.target_time or ""
         )
@@ -140,6 +148,7 @@ def render() -> None:
                 "kind": st.column_config.SelectboxColumn("Kind", options=CONSTRAINT_KINDS),
                 "area": st.column_config.TextColumn("Area"),
                 "note": st.column_config.TextColumn("Note"),
+                "severity": st.column_config.SelectboxColumn("Severity", options=[""] + SEVERITIES),
                 "active": st.column_config.CheckboxColumn("Active"),
             },
             key="cons_editor",
@@ -163,6 +172,7 @@ def render() -> None:
                     },
                     "goal": {
                         "race_type": race_type,
+                        "target_distance_km": target_distance or None,
                         "target_time": target_time or None,
                         "race_date": None if no_date else race_date,
                         "horizon_weeks": horizon or None,

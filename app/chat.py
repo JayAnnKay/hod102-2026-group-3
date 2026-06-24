@@ -1,5 +1,9 @@
 import streamlit as st
 
+from core.coach import get_reply
+from core.coach import generate_plan
+from core.data_io import load_profile
+
 
 def render():
     st.markdown(
@@ -22,30 +26,57 @@ def render():
 
     # Chat history
     for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
+
+        role = msg.get("role", "assistant")
+
+        avatar = "👤" if role == "user" else "🤖"
+
+        with st.chat_message(role, avatar=avatar):
             st.write(msg["content"])
 
     # Input
     user_input = st.chat_input("Message your coach...")
+
     if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
+
         st.session_state.messages.append(
-            {"role": "assistant", "content": "Got it! Tell me more about your goal."}
+            {
+                "role": "user",
+                "content": user_input,
+            }
         )
+
+        reply = get_reply(user_input)
+
+        st.session_state.messages.append(
+            {
+                "role": "assistant",
+                "content": reply,
+            }
+        )
+
         st.rerun()
 
     # CTA
     if st.session_state.messages:
-        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-        if st.button("Generate Training Plan", use_container_width=True):
-            st.session_state.plan = """Week 1 · Base
-  Mon: 8 km easy
-  Wed: 6 km intervals
-  Sat: 14 km long
+        st.markdown(
+            "<div style='height:0.5rem'></div>",
+            unsafe_allow_html=True,
+        )
 
-Week 2 · Build
-  Mon: 9 km easy
-  Wed: 7 km intervals
-  Sat: 16 km long"""
+        if st.button(
+            "Generate Training Plan",
+            use_container_width=True,
+        ):
+
+            if not st.session_state.get("plan"):
+
+                runner = load_profile()
+
+                st.session_state.plan = generate_plan(
+                    runner
+                )
+
             st.session_state.page = "Plan"
+
             st.rerun()
