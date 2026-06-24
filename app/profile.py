@@ -25,6 +25,7 @@ from core.profile_model import (
     CONSTRAINT_KINDS,
     DAYS,
     GENDERS,
+    SEVERITIES,
     RunnerProfile,
     default_profile,
     to_display_rows,
@@ -33,11 +34,12 @@ from core.profile_model import (
 
 def _constraints_to_df(profile: RunnerProfile) -> pd.DataFrame:
     rows = [
-        {"kind": c.kind, "area": c.area or "", "note": c.note, "active": c.active}
+        {"kind": c.kind, "area": c.area or "", "note": c.note,
+         "severity": c.severity or "", "active": c.active}
         for c in profile.constraints
     ]
     if not rows:
-        rows = [{"kind": "other", "area": "", "note": "", "active": True}]
+        rows = [{"kind": "other", "area": "", "note": "", "severity": "", "active": True}]
     return pd.DataFrame(rows)
 
 
@@ -48,11 +50,13 @@ def _df_to_constraints(df: pd.DataFrame) -> list[dict]:
         area = str(r.get("area", "")).strip()
         if not note and not area:
             continue  # drop empty rows
+        sev = str(r.get("severity", "")).strip()
         out.append(
             {
                 "kind": r.get("kind", "other"),
                 "area": area or None,
                 "note": note,
+                "severity": sev or None,
                 "active": bool(r.get("active", True)),
             }
         )
@@ -60,11 +64,8 @@ def _df_to_constraints(df: pd.DataFrame) -> list[dict]:
 
 
 def render() -> None:
-    st.markdown(
-        "<h2 style='font-size:1.6rem!important;font-weight:800;margin-bottom:0.2rem'>Athlete Profile</h2>"
-        "<p style='color:rgba(255,255,255,0.4)!important;font-size:0.85rem;margin-bottom:1.2rem'>Your physiological data</p>",
-        unsafe_allow_html=True,
-    )
+    st.header("User profile")
+    st.caption("What the app knows about the runner.")
 
     if "profile" not in st.session_state:
         raw = data_io.load_profile()  # dict from core; {} on first run
@@ -75,22 +76,12 @@ def render() -> None:
 
     # ---------------- READ MODE (flat display) ----------------
     if not st.session_state.get("editing_profile"):
-        rows_html = ""
         for label, value in to_display_rows(profile):
-            rows_html += (
-                f"<div style='display:flex;justify-content:space-between;padding:12px 0;"
-                f"border-bottom:1px solid rgba(255,255,255,0.05)'>"
-                f"<span style='color:rgba(255,255,255,0.5);font-size:0.82rem;text-transform:uppercase;"
-                f"letter-spacing:1px'>{label}</span>"
-                f"<span style='font-weight:600;font-size:0.92rem;text-align:right;max-width:55%'>{value}</span>"
-                f"</div>"
-            )
-        st.markdown(
-            f"<div style='background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);"
-            f"border-radius:20px;padding:1.2rem;margin-bottom:1rem'>{rows_html}</div>",
-            unsafe_allow_html=True,
-        )
-        if st.button("Edit Profile", use_container_width=True):
+            c1, c2 = st.columns([1, 2])
+            c1.markdown(f"**{label}**")
+            c2.write(value)
+        st.divider()
+        if st.button("Modify"):
             st.session_state.editing_profile = True
             st.rerun()
         return
@@ -108,6 +99,10 @@ def render() -> None:
 
         st.subheader("Goal")
         race_type = st.text_input("Race / goal type", profile.goal.race_type)
+        target_distance = st.number_input(
+            "Target distance (km, 0 = unset)", min_value=0.0, max_value=500.0,
+            value=float(profile.goal.target_distance_km or 0), step=0.5,
+        )
         target_time = st.text_input(
             "Target time (MM:SS or HH:MM:SS)", profile.goal.target_time or ""
         )
@@ -140,6 +135,7 @@ def render() -> None:
                 "kind": st.column_config.SelectboxColumn("Kind", options=CONSTRAINT_KINDS),
                 "area": st.column_config.TextColumn("Area"),
                 "note": st.column_config.TextColumn("Note"),
+                "severity": st.column_config.SelectboxColumn("Severity", options=[""] + SEVERITIES),
                 "active": st.column_config.CheckboxColumn("Active"),
             },
             key="cons_editor",
@@ -148,7 +144,7 @@ def render() -> None:
         submitted = st.form_submit_button("Save", type="primary")
 
     # Cancel lives outside the form (forms only allow form_submit_button).
-    if st.button("Cancel", use_container_width=True):
+    if st.button("Cancel"):
         st.session_state.editing_profile = False
         st.rerun()
 
@@ -163,6 +159,7 @@ def render() -> None:
                     },
                     "goal": {
                         "race_type": race_type,
+                        "target_distance_km": target_distance or None,
                         "target_time": target_time or None,
                         "race_date": None if no_date else race_date,
                         "horizon_weeks": horizon or None,

@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field, field_validator
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 GENDERS = ["female", "male", "other", "prefer_not_to_say"]
 CONSTRAINT_KINDS = ["injury", "preference", "other"]
+SEVERITIES = ["mild", "moderate", "severe"]
 
 _TIME_RE = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")  # MM:SS or HH:MM:SS
 
@@ -27,19 +28,19 @@ class Identity(BaseModel):
     first_name: str = ""
     city: Optional[str] = None
     gender: Optional[str] = None
-
     @field_validator("gender")
     @classmethod
     def _gender_known(cls, v: Optional[str]) -> Optional[str]:
         if v in (None, ""):
             return None
+        v = v.strip().lower()          # normalise "Female" -> "female"
         if v not in GENDERS:
             raise ValueError(f"gender must be one of {GENDERS}")
         return v
 
-
 class Goal(BaseModel):
     race_type: str = ""                       # "10k", "half-marathon", ...
+    target_distance_km: Optional[float] = Field(default=None, ge=0)
     target_time: Optional[str] = None         # "00:50:00" or "50:00"
     race_date: Optional[date] = None
     horizon_weeks: Optional[int] = Field(default=None, ge=1, le=104)
@@ -72,7 +73,17 @@ class Constraint(BaseModel):
     kind: Literal["injury", "preference", "other"] = "other"
     area: Optional[str] = None                # "right knee"
     note: str = ""                            # "niggle"
+    severity: Optional[str] = None            # mild | moderate | severe
     active: bool = True
+
+    @field_validator("severity")
+    @classmethod
+    def _severity_known(cls, v: Optional[str]) -> Optional[str]:
+        if v in (None, ""):
+            return None
+        if v not in SEVERITIES:
+            raise ValueError(f"severity must be one of {SEVERITIES}")
+        return v
 
 
 class RunnerProfile(BaseModel):
@@ -90,12 +101,13 @@ def default_profile() -> RunnerProfile:
     """Seed used on first launch (Day 1 hard-coded runner)."""
     return RunnerProfile(
         identity=Identity(first_name="Marie", city="Lyon", gender="female"),
-        goal=Goal(race_type="10k", target_time="00:50:00", horizon_weeks=10),
+        goal=Goal(race_type="10k", target_distance_km=10, target_time="00:50:00", horizon_weeks=10),
         availability=Availability(
             sessions_per_week=3, preferred_days=["Tue", "Thu", "Sat"]
         ),
         constraints=[
-            Constraint(kind="injury", area="right knee", note="niggle", active=True)
+            Constraint(kind="injury", area="right knee", note="niggle",
+                       severity="mild", active=True)
         ],
     )
 
