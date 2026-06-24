@@ -87,15 +87,14 @@ def db_get_active_injuries(runner_id: int) -> list:
         conn.close()
 
 
-def db_add_injury(runner_id: int, kind: str, severity: str,
-                  area: str = "", note: str = "") -> str:
+def db_add_injury(runner_id: int, area: str, severity: str, note: str = "") -> str:
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO injury (runner_id, kind, severity, area, note, "
-                "active, logged_at) VALUES (%s, %s, %s, %s, %s, true, NOW())",
-                (runner_id, kind, severity, area or None, note or None),
+                "active, logged_at) VALUES (%s, 'injury', %s, %s, %s, true, NOW())",
+                (runner_id, severity, area or None, note or None),
             )
         conn.commit()
         return "injury logged"

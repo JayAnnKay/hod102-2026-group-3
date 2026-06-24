@@ -112,15 +112,13 @@ def save_plan(runner_id: Annotated[int, InjectedState("runner_id")],
 
 @tool
 def add_injury(runner_id: Annotated[int, InjectedState("runner_id")],
-               kind: str, severity: str, area: str = "", note: str = "") -> str:
+               area: str, severity: str, note: str = "") -> str:
     """Log a new injury for the runner.
-    kind: body part e.g. 'knee', 'ankle', 'hamstring'.
+    area: body part e.g. 'knee', 'left ankle', 'hamstring'.
     severity: niggle | moderate | severe.
-    area: optional side e.g. 'left', 'right'.
     Call when runner reports pain, soreness, or a physical issue."""
-    print(f"  [tool] add_injury(runner_id={runner_id}, kind={kind}, "
-          f"severity={severity}, area={area})")
-    result = db_add_injury(runner_id, kind, severity, area, note)
+    print(f"  [tool] add_injury(runner_id={runner_id}, area={area}, severity={severity})")
+    result = db_add_injury(runner_id, area, severity, note)
     print(f"  [tool] -> {result}")
     return result
 
