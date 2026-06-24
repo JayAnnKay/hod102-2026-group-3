@@ -1,2 +1,6 @@
 streamlit
 pandas
+google-generativeai
+python-dotenv
+pydantic>=2
+psycopg2-binary
