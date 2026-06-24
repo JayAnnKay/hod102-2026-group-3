@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-from core.data_io import load_runner
+from core.db import db_get_recent_sessions
+from core.data_io import get_runner_id
 
 
 def pace_to_seconds(pace_str):
@@ -26,8 +27,9 @@ def render():
         unsafe_allow_html=True,
     )
 
-    runner = load_runner()
-    sessions = runner.get("sessions", [])
+    # grab runner_id from session state, fall back to DB lookup if chat hasn't run yet
+    runner_id = st.session_state.get("runner_id") or get_runner_id()
+    sessions = db_get_recent_sessions(runner_id, n=500) if runner_id else []
 
     if not sessions:
         st.markdown(

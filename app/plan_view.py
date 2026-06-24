@@ -1,4 +1,6 @@
 import streamlit as st
+from core.db import db_get_current_plan
+from core.data_io import get_runner_id
 
 
 def _parse_plan(plan_text: str):
@@ -27,8 +29,16 @@ def render():
         unsafe_allow_html=True,
     )
 
+    # check session state first (plan was just generated this session)
+    # if empty (e.g. after a refresh), load whatever was last saved in DB
     plan = st.session_state.get("plan", "")
-    st.write(plan)
+    if not plan:
+        runner_id = st.session_state.get("runner_id") or get_runner_id()
+        if runner_id:
+            stored = db_get_current_plan(runner_id)
+            plan = stored.get("content", "")
+            if plan:
+                st.session_state.plan = plan  # cache it so we don't re-query every render
 
     if not plan:
         st.markdown(
