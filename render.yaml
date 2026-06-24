@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: runcoach
+    runtime: docker
+    plan: free
+    branch: main
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false        # set manually in Render dashboard
+      - key: APP_PASSWORD
+        sync: false        # set manually in Render dashboard
