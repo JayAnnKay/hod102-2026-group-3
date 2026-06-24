@@ -52,7 +52,7 @@ def render():
 
     # Filter
     run_types = df["Type"].unique()
-    selected_types = st.multiselect("Filter by run type", options=run_types, default=run_types)
+    selected_types = st.multiselect("Filter by run type", options=run_types, default=run_types, key="run_type_filter")
     filtered_df = df[df["Type"].isin(selected_types)]
 
     # Stats

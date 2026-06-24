@@ -125,7 +125,18 @@ def _goal_phrase(g: Goal) -> str:
     return ", ".join(bits) or "—"
 
 
+def _availability_phrase(p: RunnerProfile) -> str:
+    # sessions/week used to be crammed into constraints — moved it here
+    parts = [f"{p.availability.sessions_per_week} sessions/week"]
+    if p.availability.preferred_days:
+        parts.append(", ".join(p.availability.preferred_days))
+    if p.availability.max_session_min:
+        parts.append(f"≤ {p.availability.max_session_min} min/session")
+    return ", ".join(parts)
+
+
 def _constraints_phrase(p: RunnerProfile) -> str:
+    # each active injury on its own line so multiple injuries don't pile up
     parts = []
     for c in p.constraints:
         if not c.active:
@@ -133,28 +144,34 @@ def _constraints_phrase(p: RunnerProfile) -> str:
         label = f"{c.area}: {c.note}" if c.area and c.note else (c.area or c.note)
         if label:
             parts.append(label.capitalize())
-    parts.append(f"{p.availability.sessions_per_week} sessions/week max")
-    if p.availability.max_session_min:
-        parts.append(f"sessions \u2264 {p.availability.max_session_min} min")
-    return " \u00b7 ".join(parts)
+    return "<br>".join(parts) if parts else "—"
 
 
 def to_display_rows(p: RunnerProfile) -> list[tuple[str, str]]:
     """Flatten the structured profile into the wireframe's label/value rows."""
     return [
-        ("First name", p.identity.first_name or "\u2014"),
-        ("City", p.identity.city or "\u2014"),
-        ("Gender", p.identity.gender or "\u2014"),
+        ("First name", p.identity.first_name or "—"),
+        ("City", p.identity.city or "—"),
+        ("Gender", p.identity.gender or "—"),
         ("Goals", _goal_phrase(p.goal)),
+        ("Availability", _availability_phrase(p)),
         ("Constraints & injuries", _constraints_phrase(p)),
     ]
 
 
-def profile_to_prompt(p: RunnerProfile) -> str:
-    """Serialize the coaching-relevant profile for the LLM context.
+def _constraints_phrase_text(p: RunnerProfile) -> str:
+    parts = []
+    for c in p.constraints:
+        if not c.active:
+            continue
+        label = f"{c.area}: {c.note}" if c.area and c.note else (c.area or c.note)
+        if label:
+            parts.append(label.capitalize())
+    return "\n".join(parts) if parts else "None"
 
-    This is the function `coach.py` calls in the afternoon LLM step.
-    """
+
+def profile_to_prompt(p: RunnerProfile) -> str:
+    """Serialize the coaching-relevant profile for the LLM context."""
     lines = ["RUNNER PROFILE", f"- Name: {p.identity.first_name or 'unknown'}"]
     if p.identity.city:
         lines.append(f"- City: {p.identity.city}")
@@ -169,7 +186,7 @@ def profile_to_prompt(p: RunnerProfile) -> str:
             else ""
         )
         + (
-            f", \u2264 {p.availability.max_session_min} min/session"
+            f", ≤ {p.availability.max_session_min} min/session"
             if p.availability.max_session_min
             else ""
         )
@@ -179,7 +196,7 @@ def profile_to_prompt(p: RunnerProfile) -> str:
         lines.append("- Constraints / injuries:")
         for c in active:
             where = f" ({c.area})" if c.area else ""
-            lines.append(f"    \u2022 [{c.kind}] {c.note}{where}")
+            lines.append(f"    • [{c.kind}] {c.note}{where}")
     if p.notes:
         lines.append(f"- Notes: {p.notes}")
     return "\n".join(lines)
