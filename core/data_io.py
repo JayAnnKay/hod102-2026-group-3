@@ -62,6 +62,16 @@ def _current_runner_id(cur) -> int | None:
     return row[0] if row else None
 
 
+def get_runner_id() -> int | None:
+    """Return the first runner's id from the DB. Returns None if no runner exists."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        return _current_runner_id(cur)
+    finally:
+        conn.close()
+
+
 def load_profile() -> dict:
     """Read the single runner's profile from the DB, or {} if no runner yet."""
     conn = get_connection()

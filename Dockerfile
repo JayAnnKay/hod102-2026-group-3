@@ -2,6 +2,9 @@ FROM python:3.11-slim
 
 # Prevent Python from buffering stdout/stderr (important for container logs)
 ENV PYTHONUNBUFFERED=1
+# without this, 'from app.chat import render' fails inside the container
+# because Streamlit adds /app/app/ to sys.path, not /app/
+ENV PYTHONPATH=/app
 
 WORKDIR /app
 
