@@ -1,4 +1,5 @@
 streamlit
 pandas
+pydantic>=2
 google-generativeai
 python-dotenv
