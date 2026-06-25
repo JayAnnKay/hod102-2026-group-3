@@ -80,7 +80,7 @@ def _make_model(model_name: str):
 _MODEL_CHAIN = [
     ("gemini-2.5-flash",      _make_model("gemini-2.5-flash")),
     ("gemini-2.5-flash-lite", _make_model("gemini-2.5-flash-lite")),
-    ("gemini-1.5-flash",      _make_model("gemini-1.5-flash")),
+    ("gemini-2.0-flash",      _make_model("gemini-2.0-flash")),
 ]
 
 
