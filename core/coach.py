@@ -224,7 +224,16 @@ def run_coach(runner_id: int, user_message: str,
               "check tool descriptions or router logic")
         return "Sorry -- I had trouble processing that. Could you try rephrasing it?"
 
-    reply = result["messages"][-1].content
+    raw = result["messages"][-1].content
+    # Gemini sometimes returns content as a list of parts instead of a plain string
+    if isinstance(raw, list):
+        reply = " ".join(p.get("text", "") for p in raw if isinstance(p, dict))
+    else:
+        reply = raw or ""
+
+    if not reply:
+        reply = "I'm ready to help! Could you tell me a bit more about what you need?"
+
     final_loops = result.get("loop_count", 0)
 
     print(f"\n[run_coach] final reply: '{reply[:80]}...'")

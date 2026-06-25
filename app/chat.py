@@ -63,7 +63,8 @@ def render():
     if st.session_state.messages:
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-        if st.button("Generate Training Plan", use_container_width=True):
+        if st.button("Generate Training Plan", use_container_width=True) and not st.session_state.get("generating_plan"):
+            st.session_state.generating_plan = True
             prompt = "Generate a training plan for me based on my profile and goals."
 
             reply = run_coach(
@@ -75,5 +76,6 @@ def render():
             st.session_state.messages.append({"role": "user", "content": prompt})
             st.session_state.messages.append({"role": "assistant", "content": reply})
             st.session_state.plan = reply
+            st.session_state.generating_plan = False
             st.session_state.page = "Plan"
             st.rerun()
