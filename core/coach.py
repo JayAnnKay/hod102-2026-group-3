@@ -66,15 +66,22 @@ def print_state(label: str, state: CoachState) -> None:
         print(f"        tool_calls  : {names}")
 
 
-# ── 2. MODEL ──────────────────────────────────────────────────────────────
+# ── 2. MODEL — fallback chain if a model returns 503 UNAVAILABLE ──────────
 
-_model = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    google_api_key=os.environ.get("GEMINI_API_KEY"),
-    max_retries=3,
-    timeout=60,
-)
-model_with_tools = _model.bind_tools(ALL_TOOLS)
+def _make_model(model_name: str):
+    return ChatGoogleGenerativeAI(
+        model=model_name,
+        google_api_key=os.environ.get("GEMINI_API_KEY"),
+        max_retries=1,   # fail fast so we can try the next model in the chain
+        timeout=45,
+    ).bind_tools(ALL_TOOLS)
+
+# tried in order — first available wins
+_MODEL_CHAIN = [
+    ("gemini-2.5-flash",      _make_model("gemini-2.5-flash")),
+    ("gemini-2.5-flash-lite", _make_model("gemini-2.5-flash-lite")),
+    ("gemini-1.5-flash",      _make_model("gemini-1.5-flash")),
+]
 
 
 # ── 3. SYSTEM PROMPT ──────────────────────────────────────────────────────
@@ -125,7 +132,22 @@ def understand(state: CoachState) -> dict:
     print("[node]  understand: LLM thinking...")
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}] + state["messages"]
-    response = model_with_tools.invoke(messages)
+
+    response = None
+    for model_name, model in _MODEL_CHAIN:
+        try:
+            response = model.invoke(messages)
+            if model_name != _MODEL_CHAIN[0][0]:
+                print(f"[node]  understand -> using fallback model: {model_name}")
+            break
+        except Exception as e:
+            if "503" in str(e) or "UNAVAILABLE" in str(e):
+                print(f"[node]  understand -> {model_name} unavailable, trying next...")
+                continue
+            raise  # anything else (400, auth) fails immediately
+
+    if response is None:
+        raise RuntimeError("All models in fallback chain returned 503 UNAVAILABLE")
 
     has_tool_calls = bool(getattr(response, "tool_calls", None))
     if has_tool_calls:
