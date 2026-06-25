@@ -11,7 +11,7 @@ terminal output and you'll see exactly which tool was called and what
 it returned.
 """
 
-from typing import Annotated, Optional, List
+from typing import Annotated
 
 from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
@@ -150,9 +150,9 @@ def log_session(runner_id: Annotated[int, InjectedState("runner_id")],
 
 @tool
 def save_goal(runner_id: Annotated[int, InjectedState("runner_id")],
-              race_type: Optional[str] = None, target_distance_km: Optional[float] = None,
-              target_time: Optional[str] = None, race_date: Optional[str] = None,
-              horizon_weeks: Optional[int] = None) -> str:
+              race_type: str = None, target_distance_km: float = None,
+              target_time: str = None, race_date: str = None,
+              horizon_weeks: int = None) -> str:
     """Save or update the runner's race goal from conversation.
     Call as soon as the runner mentions what they are training for.
     race_type: e.g. '10k', 'half marathon', 'marathon'.
@@ -171,9 +171,9 @@ def save_goal(runner_id: Annotated[int, InjectedState("runner_id")],
 
 @tool
 def update_availability(runner_id: Annotated[int, InjectedState("runner_id")],
-                         sessions_per_week: Optional[int] = None,
-                         preferred_days: Optional[List[str]] = None,
-                         max_session_min: Optional[int] = None) -> str:
+                         sessions_per_week: int = None,
+                         preferred_days: list = None,
+                         max_session_min: int = None) -> str:
     """Update the runner's weekly training availability from conversation.
     Call when the runner mentions how many days they can train or which days.
     sessions_per_week: number of sessions per week e.g. 3.
