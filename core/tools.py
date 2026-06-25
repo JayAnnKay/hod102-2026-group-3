@@ -20,7 +20,7 @@ from core.db import (
     db_get_runner_profile, db_get_goals, db_get_active_injuries,
     db_get_recent_sessions, db_get_current_plan, db_compute_progress,
     db_save_plan, db_add_injury, db_resolve_injury,
-    db_log_session, db_update_goal_date,
+    db_log_session, db_update_goal_date, db_save_goal, db_update_availability,
 )
 
 
@@ -149,6 +149,44 @@ def log_session(runner_id: Annotated[int, InjectedState("runner_id")],
 
 
 @tool
+def save_goal(runner_id: Annotated[int, InjectedState("runner_id")],
+              race_type: str = None, target_distance_km: float = None,
+              target_time: str = None, race_date: str = None,
+              horizon_weeks: int = None) -> str:
+    """Save or update the runner's race goal from conversation.
+    Call as soon as the runner mentions what they are training for.
+    race_type: e.g. '10k', 'half marathon', 'marathon'.
+    target_distance_km: race distance in km e.g. 10.0, 21.1, 42.2.
+    target_time: target finish time in HH:MM:SS format e.g. '00:50:00'.
+    race_date: race date YYYY-MM-DD if they mention a specific date.
+    horizon_weeks: weeks until race if no fixed date e.g. 10.
+    Only pass fields the runner actually mentioned — others stay unchanged."""
+    print(f"  [tool] save_goal(runner_id={runner_id}, race_type={race_type}, "
+          f"distance={target_distance_km}, horizon={horizon_weeks})")
+    result = db_save_goal(runner_id, race_type, target_distance_km,
+                          target_time, race_date, horizon_weeks)
+    print(f"  [tool] -> {result}")
+    return result
+
+
+@tool
+def update_availability(runner_id: Annotated[int, InjectedState("runner_id")],
+                         sessions_per_week: int = None, preferred_days: list = None,
+                         max_session_min: int = None) -> str:
+    """Update the runner's weekly training availability from conversation.
+    Call when the runner mentions how many days they can train or which days.
+    sessions_per_week: number of sessions per week e.g. 3.
+    preferred_days: list of days e.g. ['Mon', 'Wed', 'Fri'].
+    max_session_min: max session length in minutes e.g. 60.
+    Only pass fields the runner actually mentioned — others stay unchanged."""
+    print(f"  [tool] update_availability(runner_id={runner_id}, "
+          f"sessions_per_week={sessions_per_week}, preferred_days={preferred_days})")
+    result = db_update_availability(runner_id, sessions_per_week, preferred_days, max_session_min)
+    print(f"  [tool] -> {result}")
+    return result
+
+
+@tool
 def update_goal_date(runner_id: Annotated[int, InjectedState("runner_id")],
                      new_date: str) -> str:
     """Update the runner's active race date. new_date format: YYYY-MM-DD.
@@ -170,6 +208,8 @@ ALL_TOOLS = [
     get_current_plan,
     analyze_progress,
     # Writes
+    save_goal,
+    update_availability,
     save_plan,
     add_injury,
     resolve_injury,
