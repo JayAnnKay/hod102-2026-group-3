@@ -69,7 +69,7 @@ def print_state(label: str, state: CoachState) -> None:
 # ── 2. MODEL ──────────────────────────────────────────────────────────────
 
 _model = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash-lite",
+    model="gemini-2.5-flash",
     google_api_key=os.environ.get("GEMINI_API_KEY"),
     max_retries=3,
     timeout=60,
