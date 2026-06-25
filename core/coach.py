@@ -217,7 +217,7 @@ def run_coach(runner_id: int, user_message: str,
     }
 
     try:
-        result = graph.invoke(initial_state, config={"recursion_limit": 10})
+        result = graph.invoke(initial_state, config={"recursion_limit": 20})
     except Exception as e:
         print(f"[run_coach] !! GRAPH ERROR: {type(e).__name__}: {e}")
         print("[run_coach] !! Likely cause: agent looped too many times -- "
