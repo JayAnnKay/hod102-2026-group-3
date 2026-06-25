@@ -367,6 +367,9 @@ selected = st.radio(
 )
 
 if selected != st.session_state.page:
+    if selected == "Profile":
+        # force a fresh DB load so agent's tool updates are reflected immediately
+        st.session_state.pop("profile", None)
     st.session_state.page = selected
     st.rerun()
 
@@ -384,6 +387,4 @@ elif st.session_state.page == "Profile":
     render()
 elif st.session_state.page == "History":
     from app.history import render
-    render()
-
     render()

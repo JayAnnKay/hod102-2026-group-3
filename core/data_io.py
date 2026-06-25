@@ -49,7 +49,10 @@ def _build_profile_dict(runner_row, goal_row, constraint_rows) -> dict:
             "max_session_min": max_min,
         },
         "constraints": [
-            {"kind": k, "area": a, "note": n, "severity": s, "active": act}
+            {
+                "kind": k if k in ("injury", "preference", "other") else "injury",
+                "area": a, "note": n, "severity": s, "active": act,
+            }
             for (k, a, n, s, act) in constraint_rows
         ],
         "notes": notes or "",

@@ -29,16 +29,14 @@ def render():
         unsafe_allow_html=True,
     )
 
-    # check session state first (plan was just generated this session)
-    # if empty (e.g. after a refresh), load whatever was last saved in DB
-    plan = st.session_state.get("plan", "")
-    if not plan:
-        runner_id = st.session_state.get("runner_id") or get_runner_id()
-        if runner_id:
-            stored = db_get_current_plan(runner_id)
-            plan = stored.get("content", "")
-            if plan:
-                st.session_state.plan = plan  # cache it so we don't re-query every render
+    # Always load from DB — session_state.plan could be an agent reply or error string
+    runner_id = st.session_state.get("runner_id") or get_runner_id()
+    plan = ""
+    if runner_id:
+        stored = db_get_current_plan(runner_id)
+        plan = stored.get("content", "")
+        if plan:
+            st.session_state.plan = plan
 
     if not plan:
         st.markdown(
@@ -56,6 +54,11 @@ def render():
         return
 
     weeks = _parse_plan(plan)
+
+    # If structured parsing failed (LLM used a different format), just render the text
+    if not weeks:
+        st.markdown(plan)
+        return
 
     for week in weeks:
         workouts_html = ""
