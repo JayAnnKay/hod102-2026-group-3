@@ -98,7 +98,13 @@ def db_update_availability(runner_id: int, sessions_per_week: int = None,
                 values.append(sessions_per_week)
             if preferred_days is not None:
                 fields.append("preferred_days = %s")
-                values.append(preferred_days)
+                _day_map = {
+                    "monday": "Mon", "tuesday": "Tue", "wednesday": "Wed",
+                    "thursday": "Thu", "friday": "Fri", "saturday": "Sat", "sunday": "Sun",
+                    "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu",
+                    "fri": "Fri", "sat": "Sat", "sun": "Sun",
+                }
+                values.append([_day_map.get(d.lower(), d) for d in preferred_days])
             if max_session_min is not None:
                 fields.append("max_session_min = %s")
                 values.append(max_session_min)
