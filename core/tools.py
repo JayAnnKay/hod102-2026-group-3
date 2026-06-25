@@ -11,7 +11,7 @@ terminal output and you'll see exactly which tool was called and what
 it returned.
 """
 
-from typing import Annotated
+from typing import Annotated, List
 
 from langchain_core.tools import tool
 from langgraph.prebuilt import InjectedState
@@ -172,7 +172,7 @@ def save_goal(runner_id: Annotated[int, InjectedState("runner_id")],
 @tool
 def update_availability(runner_id: Annotated[int, InjectedState("runner_id")],
                          sessions_per_week: int = None,
-                         preferred_days: list = None,
+                         preferred_days: List[str] = None,
                          max_session_min: int = None) -> str:
     """Update the runner's weekly training availability from conversation.
     Call when the runner mentions how many days they can train or which days.
