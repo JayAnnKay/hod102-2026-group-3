@@ -122,7 +122,11 @@ def understand(state: CoachState) -> dict:
         ]
         print(f"[node]  understand -> LLM wants to call: {tool_names}")
     else:
-        preview = (response.content or "")[:80].replace("\n", " ")
+        # Gemini sometimes returns content as a list of parts, not a plain string
+        content = response.content or ""
+        if isinstance(content, list):
+            content = " ".join(p.get("text", "") for p in content if isinstance(p, dict))
+        preview = str(content)[:80].replace("\n", " ")
         print(f"[node]  understand -> LLM produced plain reply: '{preview}...'")
 
     new_loop = state.get("loop_count", 0) + 1
