@@ -1,25 +1,71 @@
 import streamlit as st
+import pandas as pd
 from core.db import db_get_current_plan
 from core.data_io import get_runner_id
 
 
-def _parse_plan(plan_text: str):
-    """Parse plan text into structured weeks."""
-    weeks = []
-    current = None
-    for line in plan_text.strip().split("\n"):
-        line = line.strip()
+_SESSION_TYPE_ICON = {
+    "intervals": "⚡", "tempo": "⚡", "speed": "⚡",
+    "long": "🏔️",
+    "recovery": "🔄", "rest": "🔄",
+    "easy": "🏃",
+}
+
+def _guess_type(text: str) -> str:
+    t = text.lower()
+    if any(k in t for k in ("interval", "tempo", "speed")):
+        return "Intervals"
+    if "long" in t:
+        return "Long"
+    if any(k in t for k in ("recovery", "rest")):
+        return "Recovery"
+    return "Easy"
+
+
+def _plan_to_rows(content: str, structured: dict) -> list[dict]:
+    """Convert plan content or structured JSON into flat session rows."""
+    rows = []
+
+    # Try structured JSON first (saved by agent as {"weeks": [...]})
+    if structured and structured.get("weeks"):
+        for w in structured["weeks"]:
+            week_num = w.get("week", "")
+            focus = w.get("focus", "")
+            label = f"Week {week_num}" + (f" — {focus}" if focus else "")
+            for s in w.get("sessions", []):
+                desc = s.get("description", s.get("workout", ""))
+                rows.append({
+                    "Week": label,
+                    "Day": s.get("day", ""),
+                    "Type": s.get("type", _guess_type(desc)).capitalize(),
+                    "Session": desc,
+                })
+        if rows:
+            return rows
+
+    # Fall back to parsing the plain-text content
+    current_week = ""
+    for line in (content or "").strip().split("\n"):
+        line = line.strip().lstrip("-*• ")
         if not line:
             continue
         if line.lower().startswith("week") or line.lower().startswith("phase"):
-            if current:
-                weeks.append(current)
-            current = {"title": line, "workouts": []}
-        elif current is not None and ":" in line:
-            current["workouts"].append(line)
-    if current:
-        weeks.append(current)
-    return weeks
+            parts = line.split(":", 1)
+            current_week = parts[0].strip()
+            if len(parts) > 1 and parts[1].strip():
+                current_week += f" — {parts[1].strip()}"
+        elif current_week and ":" in line:
+            parts = line.split(":", 1)
+            day = parts[0].strip()
+            session = parts[1].strip()
+            rows.append({
+                "Week": current_week,
+                "Day": day,
+                "Type": _guess_type(session),
+                "Session": session,
+            })
+
+    return rows
 
 
 def render():
@@ -29,18 +75,20 @@ def render():
         unsafe_allow_html=True,
     )
 
-    # Always load from DB — session_state.plan could be an agent reply or error string
     runner_id = st.session_state.get("runner_id") or get_runner_id()
     plan = ""
+    structured = {}
     if runner_id:
         stored = db_get_current_plan(runner_id)
         plan = stored.get("content", "")
+        structured = stored.get("structured") or {}
         if plan:
             st.session_state.plan = plan
 
     if not plan:
         st.markdown(
-            "<div style='background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:2rem;text-align:center;margin-bottom:1rem'>"
+            "<div style='background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);"
+            "border-radius:20px;padding:2rem;text-align:center;margin-bottom:1rem'>"
             "<div style='font-size:2.5rem;margin-bottom:0.8rem'>📋</div>"
             "<p style='font-weight:700;font-size:1.1rem;margin-bottom:0.4rem'>No plan yet</p>"
             "<p style='color:rgba(255,255,255,0.5)!important;font-size:0.85rem;line-height:1.6'>"
@@ -53,43 +101,37 @@ def render():
             st.rerun()
         return
 
-    weeks = _parse_plan(plan)
+    rows = _plan_to_rows(plan, structured)
 
-    # If structured parsing failed (LLM used a different format), just render the text
-    if not weeks:
+    if not rows:
+        # Couldn't parse structure — show raw text so plan is always readable
         st.markdown(plan)
         return
 
-    for week in weeks:
-        workouts_html = ""
-        for w in week["workouts"]:
-            parts = w.split(":", 1)
-            day = parts[0].strip()
-            desc = parts[1].strip() if len(parts) > 1 else w
+    df = pd.DataFrame(rows)
 
-            # Pick icon
-            dl = desc.lower()
-            if "interval" in dl or "tempo" in dl:
-                icon = "⚡"
-            elif "long" in dl:
-                icon = "🏔️"
-            else:
-                icon = "🏃"
+    # Summary stats
+    weeks = df["Week"].unique()
+    total_sessions = len(df)
+    st.markdown(
+        f"<div style='background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);"
+        f"border-radius:20px;padding:1.2rem;margin-bottom:1rem'>"
+        f"<div style='display:flex;justify-content:space-around;text-align:center'>"
+        f"<div><div style='color:rgba(255,255,255,0.45);font-size:0.7rem;text-transform:uppercase;"
+        f"letter-spacing:1px;margin-bottom:4px'>Weeks</div>"
+        f"<div style='color:#CCFF00;font-weight:800;font-size:1.6rem'>{len(weeks)}</div></div>"
+        f"<div style='border-left:1px solid rgba(255,255,255,0.08);padding-left:1.5rem'>"
+        f"<div style='color:rgba(255,255,255,0.45);font-size:0.7rem;text-transform:uppercase;"
+        f"letter-spacing:1px;margin-bottom:4px'>Sessions</div>"
+        f"<div style='color:#00F0FF;font-weight:800;font-size:1.6rem'>{total_sessions}</div></div>"
+        f"</div></div>",
+        unsafe_allow_html=True,
+    )
 
-            workouts_html += (
-                f"<div style='display:flex;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)'>"
-                f"<span style='font-size:1.2rem;margin-right:10px'>{icon}</span>"
-                f"<span style='color:rgba(255,255,255,0.5);font-size:0.8rem;font-weight:700;width:40px;flex-shrink:0'>{day}</span>"
-                f"<span style='font-size:0.9rem;font-weight:500'>{desc}</span>"
-                f"</div>"
-            )
+    # Week filter
+    selected_weeks = st.multiselect(
+        "Filter by week", options=list(weeks), default=list(weeks), key="plan_week_filter"
+    )
+    filtered = df[df["Week"].isin(selected_weeks)] if selected_weeks else df
 
-        st.markdown(
-            f"<div style='background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);"
-            f"border-radius:20px;padding:1.2rem;margin-bottom:0.8rem;border-left:3px solid #CCFF00'>"
-            f"<p style='color:#CCFF00!important;font-size:0.8rem!important;font-weight:700;text-transform:uppercase;"
-            f"letter-spacing:1px;margin-bottom:0.5rem'>{week['title']}</p>"
-            f"{workouts_html}"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
+    st.dataframe(filtered, use_container_width=True, hide_index=True)

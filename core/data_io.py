@@ -13,6 +13,18 @@ from core.db import get_connection
 
 DATA_PATH = Path(__file__).parent.parent / "data" / "runner.json"
 
+_DAY_ABBREV = {
+    "monday": "Mon", "tuesday": "Tue", "wednesday": "Wed",
+    "thursday": "Thu", "friday": "Fri", "saturday": "Sat", "sunday": "Sun",
+    "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu",
+    "fri": "Fri", "sat": "Sat", "sun": "Sun",
+}
+
+def _normalize_days(days: list) -> list:
+    if not days:
+        return []
+    return [_DAY_ABBREV.get(d.lower(), d) for d in days]
+
 
 def load_runner() -> dict:
     with open(DATA_PATH, "r") as f:
@@ -45,7 +57,7 @@ def _build_profile_dict(runner_row, goal_row, constraint_rows) -> dict:
         "goal": goal,
         "availability": {
             "sessions_per_week": spw if spw is not None else 3,
-            "preferred_days": list(pref_days) if pref_days else [],
+            "preferred_days": _normalize_days(list(pref_days) if pref_days else []),
             "max_session_min": max_min,
         },
         "constraints": [
