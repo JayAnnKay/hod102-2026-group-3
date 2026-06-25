@@ -350,8 +350,6 @@ if not st.session_state.get("authed"):
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 if "page" not in st.session_state:
     st.session_state.page = "Chat"
-if "messages" not in st.session_state:
-    st.session_state.messages = []
 if "plan" not in st.session_state:
     st.session_state.plan = ""
 

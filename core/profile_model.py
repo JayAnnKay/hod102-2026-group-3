@@ -126,25 +126,25 @@ def _goal_phrase(g: Goal) -> str:
 
 
 def _availability_phrase(p: RunnerProfile) -> str:
-    # sessions/week used to be crammed into constraints — moved it here
-    parts = [f"{p.availability.sessions_per_week} sessions/week"]
+    phrase = f"{p.availability.sessions_per_week} sessions/week"
     if p.availability.preferred_days:
-        parts.append(", ".join(p.availability.preferred_days))
+        phrase += f" ({', '.join(p.availability.preferred_days)})"
     if p.availability.max_session_min:
-        parts.append(f"≤ {p.availability.max_session_min} min/session")
-    return ", ".join(parts)
+        phrase += f", ≤ {p.availability.max_session_min} min/session"
+    return phrase
 
 
 def _constraints_phrase(p: RunnerProfile) -> str:
-    # each active injury on its own line so multiple injuries don't pile up
-    parts = []
-    for c in p.constraints:
-        if not c.active:
-            continue
-        label = f"{c.area}: {c.note}" if c.area and c.note else (c.area or c.note)
-        if label:
-            parts.append(label.capitalize())
-    return "<br>".join(parts) if parts else "—"
+    active = [c for c in p.constraints if c.active]
+    if not active:
+        return "—"
+    # show most recent injury only, with a count if there are more
+    latest = active[-1]
+    label = f"{latest.area}: {latest.note}" if latest.area and latest.note else (latest.area or latest.note)
+    result = label.capitalize() if label else "—"
+    if len(active) > 1:
+        result += f" +{len(active) - 1} more"
+    return result
 
 
 def to_display_rows(p: RunnerProfile) -> list[tuple[str, str]]:

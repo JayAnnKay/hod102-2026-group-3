@@ -56,6 +56,62 @@ def db_get_goals(runner_id: int) -> dict:
         conn.close()
 
 
+def db_save_goal(runner_id: int, race_type: str = None, target_distance_km: float = None,
+                 target_time: str = None, race_date: str = None, horizon_weeks: int = None) -> str:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT goal_id FROM goals WHERE runner_id = %s", (runner_id,))
+            existing = cur.fetchone()
+            if existing:
+                # only overwrite fields the runner actually mentioned
+                cur.execute(
+                    "UPDATE goals SET "
+                    "race_type = COALESCE(%s, race_type), "
+                    "target_distance_km = COALESCE(%s, target_distance_km), "
+                    "target_time = COALESCE(%s, target_time), "
+                    "race_date = COALESCE(%s, race_date), "
+                    "horizon_weeks = COALESCE(%s, horizon_weeks) "
+                    "WHERE runner_id = %s",
+                    (race_type, target_distance_km, target_time, race_date, horizon_weeks, runner_id),
+                )
+            else:
+                cur.execute(
+                    "INSERT INTO goals (runner_id, race_type, target_distance_km, "
+                    "target_time, race_date, horizon_weeks) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (runner_id, race_type, target_distance_km, target_time, race_date, horizon_weeks),
+                )
+        conn.commit()
+        return "goal saved"
+    finally:
+        conn.close()
+
+
+def db_update_availability(runner_id: int, sessions_per_week: int = None,
+                            preferred_days: list = None, max_session_min: int = None) -> str:
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            fields, values = [], []
+            if sessions_per_week is not None:
+                fields.append("sessions_per_week = %s")
+                values.append(sessions_per_week)
+            if preferred_days is not None:
+                fields.append("preferred_days = %s")
+                values.append(preferred_days)
+            if max_session_min is not None:
+                fields.append("max_session_min = %s")
+                values.append(max_session_min)
+            if not fields:
+                return "nothing to update"
+            values.append(runner_id)
+            cur.execute(f"UPDATE runners SET {', '.join(fields)} WHERE id = %s", values)
+        conn.commit()
+        return "availability updated"
+    finally:
+        conn.close()
+
+
 def db_update_goal_date(runner_id: int, new_date: str) -> str:
     conn = get_connection()
     try:
