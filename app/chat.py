@@ -44,20 +44,24 @@ def render():
         with st.chat_message(role, avatar=avatar):
             st.write(msg["content"])
 
-    # Input
+    # Input — render new messages inline so user gets instant feedback
     user_input = st.chat_input("Message your coach...")
 
     if user_input:
+        with st.chat_message("user", avatar="👤"):
+            st.write(user_input)
+
+        with st.chat_message("assistant", avatar="🤖"):
+            with st.spinner("Coach is thinking..."):
+                reply = run_coach(
+                    runner_id=runner_id,
+                    user_message=user_input,
+                    history=st.session_state.messages,
+                )
+            st.write(reply)
+
         st.session_state.messages.append({"role": "user", "content": user_input})
-
-        reply = run_coach(
-            runner_id=runner_id,
-            user_message=user_input,
-            history=st.session_state.messages[:-1],  # history before this message
-        )
-
         st.session_state.messages.append({"role": "assistant", "content": reply})
-        st.rerun()
 
     # Generate Training Plan button
     if st.session_state.messages:
@@ -67,15 +71,15 @@ def render():
             st.session_state.generating_plan = True
             prompt = "Generate a training plan for me based on my profile and goals."
 
-            reply = run_coach(
-                runner_id=runner_id,
-                user_message=prompt,
-                history=st.session_state.messages,
-            )
+            with st.spinner("Building your training plan..."):
+                reply = run_coach(
+                    runner_id=runner_id,
+                    user_message=prompt,
+                    history=st.session_state.messages,
+                )
 
             st.session_state.messages.append({"role": "user", "content": prompt})
             st.session_state.messages.append({"role": "assistant", "content": reply})
-            st.session_state.plan = reply
             st.session_state.generating_plan = False
             st.session_state.page = "Plan"
             st.rerun()
